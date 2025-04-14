@@ -155,13 +155,13 @@ In order to use this crate, you would need to build and flash the source code fo
 ## Building From Source
 Rather than flashing the precompiled binaries, it's possible to clone the repository and build the source. This would require some additional dependencies and modifications depending on the device you are using.
 
-### Dependencies
+### 📦 Dependencies
 At a minimum, you would need the following:
 * Rust toolchain with ESP target support installed. Full instructions for setting up a development environment are available [here](https://docs.esp-rs.org/book/installation/index.html). 
 * Tool for flashing the firmware. It is recommended to use `esp-flash`. Installation instructions are available [here](https://docs.esp-rs.org/book/tooling/espflash.html).
 * A terminal program to view the output. It is also recommended to use  `esp-flash` which was installed in the previous step.
 
-### Procedure
+### 📋 Procedure
 1. Clone this repository & identify the device you are using (ESP32-C3, ESP32-S3, ESP32-C6...etc.). The project repository code configuration defaults to the ESP32-C3 device. If you are using a ESP32-C3 you can skip to step 4. Also if you wish to enable `defmt` logging, follow the steps in the following section.
 2. Modify .cargo/config.toml
 3. Modify Cargo.toml dependencies
