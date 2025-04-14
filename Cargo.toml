@@ -28,7 +28,7 @@ embassy-time = { version = "0.4.0", features = ["generic-queue-8"] }
 esp-hal-embassy = { version = "0.6.0", features = ["esp32c3"] }
 static_cell = { version = "2.1.0", features = ["nightly"] }
 embassy-sync = { version = "0.6.1" }
-esp-csi-rs = { path = "../esp-csi-rs/", features = ["esp32c3", "println"] }
+esp-csi-rs = { version = "0.1.0", features = ["esp32c3", "println"] }
 menu = "0.6.1"
 
 [profile.dev]
