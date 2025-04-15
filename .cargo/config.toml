@@ -1,20 +1,85 @@
+## Project Runners ##
+# Uncomment only one of the runners
+# If you want to use the defmt logger, uncomment the defmt runner
+
+## Default: ESP32-C3 Runner ##
 [target.riscv32imc-unknown-none-elf]
-runner = "espflash flash --monitor --log-format defmt"
+# Run with defmt logging enabled
+# runner = "espflash flash --monitor --log-format defmt"
+# Run without defmt logging enabled
+runner = "espflash flash --monitor"
+rustflags = [
+  "-C",
+  "link-arg=-Tlinkall.x",
+  # Uncomment the following two lines if you want to use defmt
+  # "-C", 
+  # "link-arg=-Tdefmt.x",
+]
+
+
+## ESP32-C6 and ESP32-H2 Runner ##
+# [target.riscv32imac-unknown-none-elf]
+# # Run with defmt logging enabled
+# # runner = "espflash flash --monitor --log-format defmt"
+# # Run without defmt logging enabled
+# runner = "espflash flash --monitor"
+# rustflags = [
+#   "-C",
+#   "link-arg=-Tlinkall.x",
+#   # Uncomment the following two lines if you want to use defmt
+#   # "-C", 
+#   # "link-arg=-Tdefmt.x",
+# ]
+
+## ESP32 Runner ##
+# [target.xtensa-esp32-none-elf]
+# runner = "espflash flash --monitor --log-format defmt"
+# runner = "espflash flash --monitor"
+# rustflags = [
+#   # GNU LD
+#   "-C",
+#   "link-arg=-Wl,-Tlinkall.x",
+#   "-C",
+#   "link-arg=-nostartfiles",
+#   # Uncomment the following two lines if you want to use defmt
+#   # "-C",
+#   # "link-arg=-Tdefmt.x",
+# ]
+
+## ESP32-S3 Runner ##
+# [target.xtensa-esp32s3-none-elf]
+# runner = "espflash flash --monitor --log-format defmt"
+# runner = "espflash flash --monitor"
+# rustflags = [
+#   # GNU LD
+#   "-C",
+#   "link-arg=-Wl,-Tlinkall.x",
+#   "-C",
+#   "link-arg=-nostartfiles",
+#   # Uncomment the following two lines if you want to use defmt
+#   # "-C",
+#   # "link-arg=-Tdefmt.x",
+# ]
+
 
 [env]
 ESP_LOG = "INFO"
 
-[build]
-rustflags = [
-  # Required to obtain backtraces (e.g. when using the "esp-backtrace" crate.)
-  # NOTE: May negatively impact performance of produced code
-  "-C",
-  "force-frame-pointers",
-  # "-C",
-  # "link-arg=-Tdefmt.x",
-]
+## Build Targets
+# Uncomment only one of the build targets
 
+[build]
+# Default: ESP32-C3 Build Target
 target = "riscv32imc-unknown-none-elf"
+
+# ESP32-C6 and ESP32-H2 Build Target
+# target = "riscv32imac-unknown-none-elf"
+
+# ESP32-S3 Build Target
+# target = "xtensa-esp32s3-none-elf"
+
+# ESP32 Build Target
+# target = "xtensa-esp32-none-elf"
 
 [unstable]
 build-std = ["alloc", "core"]

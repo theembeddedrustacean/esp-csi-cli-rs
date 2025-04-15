@@ -11,6 +11,8 @@ In order to use this crate, you would need to build and flash the source code fo
 - ESP32-S3
 - ESP32-H2
 
+![CLI Snapshot](/assets/cli_snapshot.png)
+
 ## Features
 
 * **Multiple Wi-Fi Modes:** Configure the ESP device as an Access Point (AP), Station (STA), AP+STA, or Sniffer.
@@ -56,7 +58,9 @@ In order to use this crate, you would need to build and flash the source code fo
 
 > 🛑 If you encounter strange behaviour with the CLI, it often helps to press ctrl+R to reset the device. Alternatively, you can terminate the whole session by pressing ctrl+C. Session termination requires that you run step 3 again to activate the monitor.
 
-## Commands
+## CLI Commands
+
+This is a list of commands available through the CLI interface:
 
 * **`help [command]`**
     * Description: Display the main help menu or details for a specific command.
@@ -148,12 +152,12 @@ In order to use this crate, you would need to build and flash the source code fo
 
 ## Important Notes
 
-* SSIDs and passwords containing spaces must have the spaces replaced with underscores (`_`) when using the `set-wifi` command. The application will convert them back internally.
-* Ensure the target AP is running before starting collection in Station mode.
+> 🛑 SSIDs and passwords containing spaces must have the spaces replaced with underscores (`_`) when using the `set-wifi` command. The application will convert them back internally.
 
+> 🛑 Ensure the target AP is running before starting collection in Station mode. Otherwise collection will fail as the station wont habe an AP to connect to.
 
 ## Building From Source
-Rather than flashing the precompiled binaries, it's possible to clone the repository and build the source. This would require some additional dependencies and modifications depending on the device you are using.
+It's possible to clone the repository and build the source. This would require some additional dependencies and modifications depending on the device you are using.
 
 ### 📦 Dependencies
 At a minimum, you would need the following:
@@ -162,76 +166,27 @@ At a minimum, you would need the following:
 * A terminal program to view the output. It is also recommended to use  `esp-flash` which was installed in the previous step.
 
 ### 📋 Procedure
-1. Clone this repository & identify the device you are using (ESP32-C3, ESP32-S3, ESP32-C6...etc.). The project repository code configuration defaults to the ESP32-C3 device. If you are using a ESP32-C3 you can skip to step 4. Also if you wish to enable `defmt` logging, follow the steps in the following section.
-2. Modify .cargo/config.toml
-3. Modify Cargo.toml dependencies
-4. Build
-5. Flash
-6. Monitor
-
-3.  **Build:** Navigate to the project directory (`csi-cli-esp32c3`) and build the project using Cargo, specifying your target:
-    ```bash
-    cargo build --release --target [specify target]
-
-    # Example for ESP32-C3
-    cargo build --release --target riscv32imc-esp-espidf
-
-    # Example for ESP32-S3
-    cargo build --release --target xtensa-esp32s3-espidf
-    ```
-    *(Note: The `build.rs` file includes specific linker arguments (`-Tlinkall.x`) needed for the build.)*
-
+1. ***Setup Project***: Clone this repository. The project repository code configuration defaults to the ESP32-C3 device. If you are using a ESP32-C3 you can skip to step 4, otherwise you need to modify the code for your desired device. Also if you wish to enable `defmt` logging, make sure to read the following section.
+2. ***Modify*** **`.cargo/config.toml`**: Head to the `config.toml` file and uncommment the runner and build target that aligns with your device.
+3. ***Modify*** **Cargo.toml**: Uncomment the feature flags relevant to your device in the dependencies.
+4. ***Build***: execute `cargo build` in the terminal to build the project.
+5. ***Monitor***: execute `cargo run` in the terminal to connect to and interact with your device.
 
 ## Enabling Logging w/ `defmt`
 This application can use either standard `println!` macros or the `defmt` framework for logging.
 
-* **How it works:** A highly efficient logging framework for embedded devices. Requires specific setup.
-* **Viewing Output:** Requires `probe-rs` or `espflash monitor --log-format defmt`.
-* **Pros:** Very fast, low overhead, structured logging, log levels (info, warn, error, etc.).
-* **Cons:** Requires configuration changes and specific tools to view output.
-
-* **To enable `defmt`:**
-    1.  **Modify `Cargo.toml`:**
-        * Add `defmt` and `defmt-rtt` as dependencies.
-        * Enable the `defmt` feature for `esp-hal` (or `esp-idf-hal` if used).
-        ```toml
-        # Example additions/modifications in Cargo.toml
-        [dependencies]
-        # ... other dependencies
-        defmt = "0.3"
-        defmt-rtt = "0.4"
-        esp-backtrace = { version = "0.11.0", features = ["esp32c3", "panic-handler", "exception-handler", "println", "defmt"] } # Ensure defmt feature is added if using esp-backtrace
-
-        # Example for esp-hal (adjust version and features as needed)
-        esp-hal = { version = "0.18.0", features = ["esp32c3", "async", "defmt"] } # Add 'defmt' feature
-
-        # ... other dependencies
-
-        [features]
-        default = []
-        # Add other features if needed
-        ```
-    2.  **Modify `.cargo/config.toml`:**
-        * Configure the runner to use `probe-rs` or `espflash` with `defmt` enabled.
-        ```toml
-        # Example .cargo/config.toml for probe-rs
-        [target.'cfg(target_arch = "riscv32")']
-        runner = "probe-rs run --chip esp32c3" # Adjust chip as needed
-
-        [target.'cfg(target_arch = "xtensa")']
-        runner = "probe-rs run --chip esp32s3" # Adjust chip as needed
-
-        # --- OR ---
-
-        # Example .cargo/config.toml for espflash (simpler)
-        [target.'cfg(any(target_arch = "riscv32", target_arch = "xtensa"))']
-        runner = "espflash flash --monitor --log-format defmt" # Monitor will show defmt logs
-        ```
-    3.  **Modify Code:**
-        * Replace `use esp_println::println;` with `use defmt::{info, warn, error};` (and other levels as needed).
-        * Replace `println!(...)` calls with `info!(...)`, `warn!(...)`, etc.
-
-* **Building/Running with `defmt`:**
-    * If using `probe-rs` runner: `cargo run --release --target <your-target>`
-    * If using `espflash` runner: `cargo run --release --target <your-target>` (will flash and open monitor)
-    * Alternatively, build (`cargo build ...`) then view logs: `espflash monitor --log-format defmt target/.../async_main`
+You can enable `defmt` as follows:
+1.  **Modify `Cargo.toml`:**  Add `defmt` and `defmt-rtt` as dependencies by uncommenting the relevant lines.
+2.  **Add Runner Parameters:** In `.cargo/config.toml` add `--log-format defmt` to the `runner` as follows:
+```
+runner = "espflash flash --monitor --log-format defmt"
+```
+3.  **Add Linker Flags:** In `.cargo/config.toml` add `"link-arg=-Tdefmt.x"` to `rustflags` as follows:
+```
+rustflags = [
+  "-C",
+  "link-arg=-Tlinkall.x",
+  "-C", 
+  "link-arg=-Tdefmt.x",
+]
+```

@@ -5,18 +5,40 @@ edition = "2021"
 
 [dependencies]
 esp-backtrace = { version = "0.15.0", features = [
+    # Uncommment one device only
+    #"esp32c6",
+    #"esp32h2",
+    #"esp32s3",
+    #"esp32",
     "esp32c3",
     "exception-handler",
     "panic-handler",
     "println",
 ] }
-esp-hal = { version = "0.23.1", features = ["esp32c3"] }
+esp-hal = { version = "0.23.1", features = [
+    # Uncommment one device only
+    #"esp32c6",
+    #"esp32h2",
+    #"esp32s3",
+    #"esp32",
+    "esp32c3",
+] }
 esp-println = { version = "0.13.0", default-features = false, features = [
+    # Uncommment one device only
+    #"esp32c6",
+    #"esp32h2",
+    #"esp32s3",
+    #"esp32",
     "esp32c3",
 ] }
 esp-alloc = { version = "0.6.0" }
 embedded-io-async = "0.6.1"
 esp-wifi = { version = "0.12.0", default-features = false, features = [
+    # Uncommment one device only
+    #"esp32c6",
+    #"esp32h2",
+    #"esp32s3",
+    #"esp32",
     "esp32c3",
     "utils",
     "wifi",
@@ -25,11 +47,31 @@ esp-wifi = { version = "0.12.0", default-features = false, features = [
 heapless = { version = "0.8.0", default-features = false }
 embassy-executor = { version = "0.7.0", features = ["task-arena-size-32768"] }
 embassy-time = { version = "0.4.0", features = ["generic-queue-8"] }
-esp-hal-embassy = { version = "0.6.0", features = ["esp32c3"] }
+esp-hal-embassy = { version = "0.6.0", features = [
+    # Uncommment one device only
+    #"esp32c6",
+    #"esp32h2",
+    #"esp32s3",
+    #"esp32",
+    "esp32c3",
+] }
 static_cell = { version = "2.1.0", features = ["nightly"] }
 embassy-sync = { version = "0.6.1" }
-esp-csi-rs = { version = "0.1.0", features = ["esp32c3", "println"] }
+esp-csi-rs = { version = "0.1.0", features = [
+    # Uncommment one device only
+    #"esp32c6",
+    #"esp32h2",
+    #"esp32s3",
+    #"esp32",
+    "esp32c3",
+    # Uncomment only one logging option
+    "println",
+    # "defmt",
+] }
 menu = "0.6.1"
+# Uncomment to use defmt logging
+# defmt = "1.0.1"
+# defmt-rtt = "1.0.0"
 
 [profile.dev]
 # Rust debug is too slow.
