@@ -5,13 +5,16 @@
 In order to use this crate, you would need to build and flash the source code for your target device. Currently supported devices include:
 
 - ESP32
-- ESP32-C2
 - ESP32-C3
 - ESP32-C6
 - ESP32-S3
 - ESP32-H2
 
+<div align="center">
+
 ![CLI Snapshot](/assets/cli_snapshot.png)
+
+</div>
 
 ## Features
 
@@ -25,7 +28,7 @@ In order to use this crate, you would need to build and flash the source code fo
 * **Flexible Logging:** Supports standard `println!` or the more efficient `defmt` logging.
 
 
-## Requirements
+## Minimum Requirements
 
 * **Hardware:** An ESP development board (e.g., ESP32-C3, ESP32-S3, ESP32...etc.).
 * **Software:** `espflash` to flash the binary and monitor the output. Installation instructions are available [here](https://docs.esp-rs.org/book/tooling/espflash.html). 
@@ -34,11 +37,24 @@ In order to use this crate, you would need to build and flash the source code fo
 
 ## Usage
 
-1.  **Download Binary:** Navigate to the /binaries folder in the repository and identify the correct .elf binary for your ESP chip. Here are the file names for the different devices:
-    * ESP32-C3: NAME?? `esp-csi-cli-rs-esp32c3.elf`
-    * ESP32-C3 with `defmt`: NAME?? `esp-csi-cli-rs-esp32c3-defmt.elf`
-    * ESP32-S3: `xtensa-esp32s3-espidf`
-    * ESP32: `xtensa-esp32-espidf`
+1.  **Download Binary:** Navigate to the /binaries folder in the repository and identify the correct binary .elf file for your ESP chip. Here are the file names for the different devices:
+
+<div align="center">
+
+| Target Board           | Binary Filename                              |
+|------------------------|----------------------------------------------|
+| ESP32-C3               | `esp-csi-cli-rs-esp32c3.elf`                 |
+| ESP32-C3 (defmt)       | `esp-csi-cli-rs-esp32c3-defmt.elf`           |
+| ESP32-C6               | `esp-csi-cli-rs-esp32c6.elf`                 |
+| ESP32-C6 (defmt)       | `esp-csi-cli-rs-esp32c6-defmt.elf`           |
+| ESP32-H2               | `esp-csi-cli-rs-esp32h2.elf`                 |
+| ESP32-H2 (defmt)       | `esp-csi-cli-rs-esp32h2-defmt.elf`           |
+| ESP32-S3               | `esp-csi-cli-rs-esp32s3.elf`                 |
+| ESP32-S3 (defmt)       | `esp-csi-cli-rs-esp32s3-defmt.elf`           |
+| ESP32                  | `esp-csi-cli-rs-esp32.elf`                   |
+| ESP32 (defmt)          | `esp-csi-cli-rs-esp32-defmt.elf`             |
+
+</div>
 
 2.  **Flash:** Connect to your ESP device over USB and use `espflash` to flash the downloaded binary to your ESP by running the following command:
     ```bash
@@ -125,23 +141,20 @@ This is a list of commands available through the CLI interface:
     * Description: Reset all configurations to their default values.
     * Example: `reset-config`
 
-## Configuration Examples
+## CLI Configuration Examples
 
-1.  **Configure as an AP and start collecting for 5 minutes (ESP32-C3):**
+1.  **Configure an ESP as an AP and start collecting for 5 minutes:**
     ```
-    # Commands in serial monitor:
-    reset-config
-    set-wifi --mode ap --ap-ssid=ESP_CSI_AP 
+    set-wifi --mode ap
+    set-wifi --ap-ssid=ESP_CSI_AP 
     set-wifi --ap-password=testing123
     set-traffic --enable --type=icmp --interval-ms=500
     show-config
     start --duration=300
     ```
 
-2.  **Configure as a Station connected to an existing network, disable some CSI features, and start collecting indefinitely (ESP32-S3):**
+2.  **Configure as a Station connected to an existing network, disable some CSI features, and start collecting indefinitely:**
     ```
-    # Commands in serial monitor:
-    reset-config
     set-wifi --mode station 
     set-wifi --sta-ssid=My_Router
     set-wifi --sta-password=router_password
