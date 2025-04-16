@@ -12,7 +12,7 @@ rustflags = [
   "-C",
   "link-arg=-Tlinkall.x",
   # Uncomment the following two lines if you want to use defmt
-  # "-C", 
+  # "-C",
   # "link-arg=-Tdefmt.x",
 ]
 
@@ -27,13 +27,13 @@ rustflags = [
 #   "-C",
 #   "link-arg=-Tlinkall.x",
 #   # Uncomment the following two lines if you want to use defmt
-#   # "-C", 
-#   # "link-arg=-Tdefmt.x",
+#   "-C",
+#   "link-arg=-Tdefmt.x",
 # ]
 
 ## ESP32 Runner ##
 # [target.xtensa-esp32-none-elf]
-# runner = "espflash flash --monitor --log-format defmt"
+# # runner = "espflash flash --monitor --log-format defmt"
 # runner = "espflash flash --monitor"
 # rustflags = [
 #   # GNU LD
@@ -42,13 +42,13 @@ rustflags = [
 #   "-C",
 #   "link-arg=-nostartfiles",
 #   # Uncomment the following two lines if you want to use defmt
-#   # "-C",
-#   # "link-arg=-Tdefmt.x",
+#   "-C",
+#   "link-arg=-Tdefmt.x",
 # ]
 
 ## ESP32-S3 Runner ##
 # [target.xtensa-esp32s3-none-elf]
-# runner = "espflash flash --monitor --log-format defmt"
+# # runner = "espflash flash --monitor --log-format defmt"
 # runner = "espflash flash --monitor"
 # rustflags = [
 #   # GNU LD
@@ -57,8 +57,8 @@ rustflags = [
 #   "-C",
 #   "link-arg=-nostartfiles",
 #   # Uncomment the following two lines if you want to use defmt
-#   # "-C",
-#   # "link-arg=-Tdefmt.x",
+#   "-C",
+#   "link-arg=-Tdefmt.x",
 # ]
 
 
@@ -67,17 +67,15 @@ ESP_LOG = "INFO"
 
 ## Build Targets
 # Uncomment only one of the build targets
+# NOTE: Beware of whitespaces between lines
 
 [build]
 # Default: ESP32-C3 Build Target
 target = "riscv32imc-unknown-none-elf"
-
 # ESP32-C6 and ESP32-H2 Build Target
 # target = "riscv32imac-unknown-none-elf"
-
 # ESP32-S3 Build Target
 # target = "xtensa-esp32s3-none-elf"
-
 # ESP32 Build Target
 # target = "xtensa-esp32-none-elf"
 

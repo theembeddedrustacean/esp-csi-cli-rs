@@ -1,45 +1,88 @@
 [package]
-name = "csi-cli-esp32c3"
+name = "csi-csi-cli-rs"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+default = []
+esp32 = [
+    "esp-hal/esp32",
+    "esp-backtrace/esp32",
+    "esp-println/esp32",
+    "esp-println/auto",
+    "esp-println/critical-section",
+    "esp-wifi/esp32",
+    "esp-wifi/csi",
+    "esp-wifi/sniffer",
+    "esp-hal-embassy/esp32",
+    "esp-csi-rs/esp32",
+    "esp-csi-rs/no-std",
+]
+esp32c3 = [
+    "esp-hal/esp32c3",
+    "esp-backtrace/esp32c3",
+    "esp-wifi/esp32c3",
+    "esp-wifi/csi",
+    "esp-wifi/sniffer",
+    "esp-hal-embassy/esp32c3",
+    "esp-println/esp32c3",
+    "esp-println/jtag-serial",
+    "esp-println/critical-section",
+    "esp-csi-rs/esp32c3",
+    "esp-csi-rs/no-std",
+]
+esp32c6 = [
+    "esp-hal/esp32c6",
+    "esp-backtrace/esp32c6",
+    "esp-wifi/esp32c6",
+    "esp-wifi/csi",
+    "esp-wifi/sniffer",
+    "esp-hal-embassy/esp32c6",
+    "esp-println/esp32c6",
+    "esp-println/jtag-serial",
+    "esp-println/critical-section",
+    "esp-csi-rs/esp32c6",
+    "esp-csi-rs/no-std",
+]
+esp32s3 = [
+    "esp-hal/esp32s3",
+    "esp-backtrace/esp32s3",
+    "esp-wifi/esp32s3",
+    "esp-wifi/csi",
+    "esp-wifi/sniffer",
+    "esp-hal-embassy/esp32s3",
+    "esp-println/esp32s3",
+    "esp-println/jtag-serial",
+    "esp-println/critical-section",
+    "esp-csi-rs/esp32s3",
+    "esp-csi-rs/no-std",
+]
+
+## Enable logging via defmt.
+defmt = [
+    "dep:defmt",
+    "dep:defmt-rtt",
+    "esp-hal/defmt",
+    "esp-wifi/defmt",
+    "esp-backtrace/defmt",
+    "embassy-executor/defmt",
+    "esp-println/defmt-espflash",
+    "esp-csi-rs/defmt",
+]
+## Enable logging via `println!()` instead of defmt.
+println = ["esp-backtrace/println", "esp-csi-rs/println"]
+
 [dependencies]
+esp-hal-embassy = { version = "0.6.0", default-features = false }
 esp-backtrace = { version = "0.15.0", features = [
-    # Uncommment one device only
-    #"esp32c6",
-    #"esp32h2",
-    #"esp32s3",
-    #"esp32",
-    "esp32c3",
     "exception-handler",
     "panic-handler",
-    "println",
 ] }
-esp-hal = { version = "0.23.1", features = [
-    # Uncommment one device only
-    #"esp32c6",
-    #"esp32h2",
-    #"esp32s3",
-    #"esp32",
-    "esp32c3",
-] }
-esp-println = { version = "0.13.0", default-features = false, features = [
-    # Uncommment one device only
-    #"esp32c6",
-    #"esp32h2",
-    #"esp32s3",
-    #"esp32",
-    "esp32c3",
-] }
+esp-hal = { version = "0.23.1", default-features = false }
+esp-println = { version = "0.13.0", default-features = false }
 esp-alloc = { version = "0.6.0" }
 embedded-io-async = "0.6.1"
 esp-wifi = { version = "0.12.0", default-features = false, features = [
-    # Uncommment one device only
-    #"esp32c6",
-    #"esp32h2",
-    #"esp32s3",
-    #"esp32",
-    "esp32c3",
     "utils",
     "wifi",
     "esp-alloc",
@@ -47,31 +90,12 @@ esp-wifi = { version = "0.12.0", default-features = false, features = [
 heapless = { version = "0.8.0", default-features = false }
 embassy-executor = { version = "0.7.0", features = ["task-arena-size-32768"] }
 embassy-time = { version = "0.4.0", features = ["generic-queue-8"] }
-esp-hal-embassy = { version = "0.6.0", features = [
-    # Uncommment one device only
-    #"esp32c6",
-    #"esp32h2",
-    #"esp32s3",
-    #"esp32",
-    "esp32c3",
-] }
 static_cell = { version = "2.1.0", features = ["nightly"] }
 embassy-sync = { version = "0.6.1" }
-esp-csi-rs = { version = "0.1.0", features = [
-    # Uncommment one device only
-    #"esp32c6",
-    #"esp32h2",
-    #"esp32s3",
-    #"esp32",
-    "esp32c3",
-    # Uncomment only one logging option
-    "println",
-    # "defmt",
-] }
+esp-csi-rs = { path = "../esp-csi-rs", default-features = false }
 menu = "0.6.1"
-# Uncomment to use defmt logging
-# defmt = "1.0.1"
-# defmt-rtt = "1.0.0"
+defmt = { version = "1.0.1", optional = true }
+defmt-rtt = { version = "1.0.0", optional = true }
 
 [profile.dev]
 # Rust debug is too slow.

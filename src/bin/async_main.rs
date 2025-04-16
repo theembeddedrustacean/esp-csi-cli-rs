@@ -1,10 +1,6 @@
 #![no_std]
 #![no_main]
 
-use embassy_time::Duration;
-use esp_backtrace as _;
-use esp_hal::usb_serial_jtag::UsbSerialJtag;
-
 use core::cell::RefCell;
 use core::fmt::Write;
 use core::u64;
@@ -12,11 +8,17 @@ use embassy_executor::Spawner;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::blocking_mutex::Mutex;
 use embassy_sync::signal::Signal;
+use embassy_time::Duration;
+use esp_backtrace as _;
 use esp_backtrace as _;
 use esp_csi_rs::{config::TrafficType, NetworkArchitechture};
 use esp_csi_rs::{CSICollector, WiFiMode};
 use esp_hal::peripherals;
 use esp_hal::timer::timg::TimerGroup;
+#[cfg(feature = "esp32")]
+use esp_hal::uart::{Config, Uart};
+#[cfg(not(feature = "esp32"))]
+use esp_hal::usb_serial_jtag::UsbSerialJtag;
 use esp_hal::Async;
 use esp_println::println;
 use esp_wifi::{init, EspWifiController};
@@ -33,8 +35,13 @@ struct Context {
     _inner: u32,
 }
 
+#[cfg(not(feature = "esp32"))]
+type SerialInterfaceType<'a> = UsbSerialJtag<'a, Async>;
+#[cfg(feature = "esp32")]
+type SerialInterfaceType<'a> = Uart<'a, Async>;
+
 // CLI Root Menu Struct Initialization
-const ROOT_MENU: Menu<UsbSerialJtag<Async>, Context> = Menu {
+const ROOT_MENU: Menu<SerialInterfaceType, Context> = Menu {
     label: "root",
     items: &[
         &Item {
@@ -112,6 +119,7 @@ Description:
     - `sniff`: Standalone device sniffing packets. No NTP sync performed. (default setting).",
             ),
         },
+        #[cfg(not(feature = "esp32c6"))]
         &Item {
             item_type: ItemType::Callback {
                 function: set_csi,
@@ -149,6 +157,86 @@ Usage:
 Examples:
     set-csi --disable-lltf --disable-ltf-merge
     set-csi --disable-htltf
+
+Description:
+This command allows you to enable or disable specific Channel State Information (CSI) features. 
+By default, all CSI features are enabled. Use the options to selectively disable specific
+configurations if necessary."),
+        },
+        #[cfg(feature = "esp32c6")]
+        &Item {
+            item_type: ItemType::Callback {
+                function: set_csi,
+                parameters: &[
+                    Parameter::Named {
+                        parameter_name: "disable-csi",
+                        help: Some("Disable acquisition of CSI"),
+                    },
+                    Parameter::Named {
+                        parameter_name: "disable-csi-legacy",
+                        help: Some("Disable acquisition of L-LTF when receiving a 11g PPDU"),
+                    },
+                    Parameter::Named {
+                        parameter_name: "disable-csi-ht20",
+                        help: Some("Disable acquisition of HT-LTF when receiving an HT20 PPDU"),
+                    },
+                    Parameter::Named {
+                        parameter_name: "disable-csi-ht40",
+                        help: Some("Disable acquisition of HT-LTF when receiving an HT40 PPDU"),
+                    },
+                    Parameter::Named {
+                        parameter_name: "disable-csi-su",
+                        help: Some("Disable acquisition of HE-LTF when receiving an HE20 SU PPDU"),
+                    },
+                    Parameter::Named {
+                        parameter_name: "disable-csi-mu",
+                        help: Some("Disable acquisition of HE-LTF when receiving an HE20 MU PPDU"),
+                    },
+                    Parameter::Named {
+                        parameter_name: "disable-csi-dcm",
+                        help: Some("Disable acquisition of HE-LTF when receiving an HE20 DCM applied PPDU"),
+                    },
+                    Parameter::Named {
+                        parameter_name: "disable-csi-beamformed",
+                        help: Some("Disable acquisition of HE-LTF when receiving an HE20 Beamformed applied PPDU"),
+                    },
+                    Parameter::NamedValue {
+                        parameter_name: "csi-he-stbc",
+                        argument_name: "csihestbc",
+                        help: Some("When receiving an STBC applied HE PPDU 0-3 value"),
+                    },
+                    Parameter::NamedValue {
+                        parameter_name: "val-scale-cfg",
+                        argument_name: "valscalecfg",
+                        help: Some("Value 0-3"),
+                    },
+                ],
+            },
+            command: "set-csi",
+            help: Some("set-csi - Configure CSI feature flags.
+
+Usage:
+    set-csi [OPTIONS]
+
+    Options:
+    --disable-csi               Disable acquisition of CSI (default: enabled)
+    --disable-csi-legacy        Disable acquisition of L-LTF when receiving a 11g PPDU (default: enabled)
+    --disable-csi-ht20          Disable acquisition of HT-LTF when receiving an HT20 PPDU (default: enabled)
+    --disable-csi-ht40          Disable acquisition of HT-LTF when receiving an HT40 PPDU (default: enabled)
+    --disable-csi-su            Disable acquisition of HE-LTF when receiving an HE20 SU PPDU (default: enabled)
+    --disable-csi-mu            Disable acquisition of HE-LTF when receiving an HE20 MU PPDU (default: enabled)
+    --disable-csi-dcm           Disable acquisition of HE-LTF when receiving an HE20 DCM applied PPDU (default: enabled)
+    --disable-csi-beamformed    Disable acquisition of HE-LTF when receiving an HE20 Beamformed applied PPDU (default: enabled)
+    --csi-he-stbc               When receiving an STBC applied HE PPDU,
+                                    0- acquire the complete HE-LTF1
+                                    1- acquire the complete HE-LTF2
+                                    2- sample evenly among the HE-LTF1 and HE-LTF2
+                                    (default: 2)
+    --val-scale-cfg             Value 0-3 (default: 2)
+
+Examples:
+    set-csi --disable-csi-legacy --csi-he-stbc=1
+    set-csi --disable-csi
 
 Description:
 This command allows you to enable or disable specific Channel State Information (CSI) features. 
@@ -213,8 +301,8 @@ Options:
   --sta-password=<PASSWORD>                Set the password for the station (default: empty).
 
 Examples:
-  set-wifi --mode ap --max-connections 5 --hide-ssid
-  set-wifi --mode station
+  set-wifi --mode=ap --max-connections=5 --hide-ssid
+  set-wifi --mode=station
 
 Description:
   Use this command to configure WiFi settings for the CSI collection process.
@@ -318,8 +406,8 @@ Description:
 };
 
 fn enter_root(
-    _menu: &Menu<UsbSerialJtag<Async>, Context>,
-    interface: &mut UsbSerialJtag<Async>,
+    _menu: &Menu<SerialInterfaceType, Context>,
+    interface: &mut SerialInterfaceType,
     _context: &mut Context,
 ) {
     writeln!(
@@ -397,14 +485,27 @@ async fn main(spawner: Spawner) {
         .spawn(csi_collector(peripherals.WIFI, init, seed as u64, spawner))
         .unwrap();
 
-    // Instantiate USB Serial JTAG for CLI host communication
-    let usb_serial_jtag = UsbSerialJtag::new(peripherals.USB_DEVICE).into_async();
+    // Instantiate Serial Interface for CLI host communication
+    #[cfg(not(feature = "esp32"))]
+    let serial = UsbSerialJtag::new(peripherals.USB_DEVICE).into_async();
+
+    #[cfg(feature = "esp32")]
+    let serial = {
+        let (tx_pin, rx_pin) = (peripherals.GPIO1, peripherals.GPIO3);
+        let config = Config::default();
+        Uart::new(peripherals.UART0, config)
+            .unwrap()
+            .with_tx(tx_pin)
+            .with_rx(rx_pin)
+            .into_async()
+    };
+
     // Create a buffer to store CLI input
     let mut clibuf = [0u8; 64];
     // Instantiate Context placeholder
     let mut context = Context::default();
     // Instantiate CLI runner with root menu, buffer, and serial
-    let mut runner = Runner::new(ROOT_MENU, &mut clibuf, usb_serial_jtag, &mut context);
+    let mut runner = Runner::new(ROOT_MENU, &mut clibuf, serial, &mut context);
 
     loop {
         // Create single element buffer for serial characters
@@ -452,10 +553,10 @@ async fn csi_collector(
 }
 
 fn set_traffic<'a>(
-    _menu: &Menu<UsbSerialJtag<Async>, Context>,
-    item: &Item<UsbSerialJtag<Async>, Context>,
+    _menu: &Menu<SerialInterfaceType, Context>,
+    item: &Item<SerialInterfaceType, Context>,
     args: &[&str],
-    serial: &mut UsbSerialJtag<Async>,
+    serial: &mut SerialInterfaceType,
     _context: &mut Context,
 ) {
     let traffic_en = argument_finder(item, args, "enable");
@@ -548,10 +649,10 @@ fn set_traffic<'a>(
 }
 
 fn set_network<'a>(
-    _menu: &Menu<UsbSerialJtag<Async>, Context>,
-    item: &Item<UsbSerialJtag<Async>, Context>,
+    _menu: &Menu<SerialInterfaceType, Context>,
+    item: &Item<SerialInterfaceType, Context>,
     args: &[&str],
-    serial: &mut UsbSerialJtag<Async>,
+    serial: &mut SerialInterfaceType,
     _context: &mut Context,
 ) {
     let arch = argument_finder(item, args, "arch");
@@ -593,11 +694,241 @@ fn set_network<'a>(
     });
 }
 
+#[cfg(feature = "esp32c6")]
 fn set_csi<'a>(
-    _menu: &Menu<UsbSerialJtag<Async>, Context>,
-    item: &Item<UsbSerialJtag<Async>, Context>,
+    _menu: &Menu<SerialInterfaceType, Context>,
+    item: &Item<SerialInterfaceType, Context>,
     args: &[&str],
-    serial: &mut UsbSerialJtag<Async>,
+    serial: &mut SerialInterfaceType,
+    _context: &mut Context,
+) {
+    let disable_csi = argument_finder(item, args, "disable-csi");
+    let disable_csi_legacy = argument_finder(item, args, "disable-csi-legacy");
+    let disable_csi_ht20 = argument_finder(item, args, "disable-csi-ht20");
+    let disable_csi_ht40 = argument_finder(item, args, "disable-csi-ht40");
+    let disable_csi_su = argument_finder(item, args, "disable-csi-su");
+    let disable_csi_mu = argument_finder(item, args, "disable-csi-mu");
+    let disable_csi_dcm = argument_finder(item, args, "disable-csi-dcm");
+    let disable_csi_beamformed = argument_finder(item, args, "disable-csi-beamformed");
+    let csi_he_stbc = argument_finder(item, args, "csi-he-stbc");
+    let val_scale_cfg = argument_finder(item, args, "val-scale-cfg");
+
+    match disable_csi {
+        Ok(_str) => {
+            CSI_COLLECTOR.lock(|config| config.borrow_mut().as_mut().unwrap().csi_config.enable = 0)
+        }
+        Err(_) => (),
+    }
+    match disable_csi_legacy {
+        Ok(_str) => CSI_COLLECTOR.lock(|config| {
+            config
+                .borrow_mut()
+                .as_mut()
+                .unwrap()
+                .csi_config
+                .acquire_csi_legacy = 0;
+        }),
+        Err(_) => (),
+    }
+    match disable_csi_ht20 {
+        Ok(_str) => CSI_COLLECTOR.lock(|config| {
+            config
+                .borrow_mut()
+                .as_mut()
+                .unwrap()
+                .csi_config
+                .acquire_csi_ht20 = 0;
+        }),
+        Err(_) => (),
+    }
+    match disable_csi_ht40 {
+        Ok(_str) => CSI_COLLECTOR.lock(|config| {
+            config
+                .borrow_mut()
+                .as_mut()
+                .unwrap()
+                .csi_config
+                .acquire_csi_ht40 = 0;
+        }),
+        Err(_) => (),
+    }
+    match disable_csi_su {
+        Ok(_str) => CSI_COLLECTOR.lock(|config| {
+            config
+                .borrow_mut()
+                .as_mut()
+                .unwrap()
+                .csi_config
+                .acquire_csi_su = 0;
+        }),
+        Err(_) => (),
+    }
+    match disable_csi_mu {
+        Ok(_str) => CSI_COLLECTOR.lock(|config| {
+            config
+                .borrow_mut()
+                .as_mut()
+                .unwrap()
+                .csi_config
+                .acquire_csi_mu = 0;
+        }),
+        Err(_) => (),
+    }
+    match disable_csi_dcm {
+        Ok(_str) => CSI_COLLECTOR.lock(|config| {
+            config
+                .borrow_mut()
+                .as_mut()
+                .unwrap()
+                .csi_config
+                .acquire_csi_dcm = 0;
+        }),
+        Err(_) => (),
+    }
+    match disable_csi_beamformed {
+        Ok(_str) => CSI_COLLECTOR.lock(|config| {
+            config
+                .borrow_mut()
+                .as_mut()
+                .unwrap()
+                .csi_config
+                .acquire_csi_beamformed = 0;
+        }),
+        Err(_) => (),
+    }
+    match csi_he_stbc {
+        Ok(str) => {
+            if str.is_some() {
+                match str.unwrap().parse::<u32>() {
+                    Ok(val) => CSI_COLLECTOR.lock(|config| {
+                        config
+                            .borrow_mut()
+                            .as_mut()
+                            .unwrap()
+                            .csi_config
+                            .acquire_csi_he_stbc = val;
+                    }),
+                    Err(_) => writeln!(serial, "Invalid Max Connections").unwrap(),
+                }
+            }
+        }
+        Err(_) => (),
+    }
+    match val_scale_cfg {
+        Ok(str) => {
+            if str.is_some() {
+                match str.unwrap().parse::<u32>() {
+                    Ok(val) => CSI_COLLECTOR.lock(|config| {
+                        config
+                            .borrow_mut()
+                            .as_mut()
+                            .unwrap()
+                            .csi_config
+                            .val_scale_cfg = val;
+                    }),
+                    Err(_) => writeln!(serial, "Invalid Max Connections").unwrap(),
+                }
+            }
+        }
+        Err(_) => (),
+    }
+
+    writeln!(serial, "\nUpdated CSI Configuration:\n").unwrap();
+    CSI_COLLECTOR.lock(|config| {
+        writeln!(
+            serial,
+            "Acquire CSI: {}",
+            config.borrow().as_ref().unwrap().csi_config.enable
+        )
+        .unwrap();
+        writeln!(
+            serial,
+            "Acquire Legacy CSI: {}",
+            config
+                .borrow()
+                .as_ref()
+                .unwrap()
+                .csi_config
+                .acquire_csi_legacy
+        )
+        .unwrap();
+        writeln!(
+            serial,
+            "Acquire HT20: {}",
+            config
+                .borrow()
+                .as_ref()
+                .unwrap()
+                .csi_config
+                .acquire_csi_ht20
+        )
+        .unwrap();
+        writeln!(
+            serial,
+            "Acquire HT40: {}",
+            config
+                .borrow()
+                .as_ref()
+                .unwrap()
+                .csi_config
+                .acquire_csi_ht40
+        )
+        .unwrap();
+        writeln!(
+            serial,
+            "Acquire HE20 SU: {}",
+            config.borrow().as_ref().unwrap().csi_config.acquire_csi_su
+        )
+        .unwrap();
+        writeln!(
+            serial,
+            "Acquire HE20 MU: {}",
+            config.borrow().as_ref().unwrap().csi_config.acquire_csi_mu
+        )
+        .unwrap();
+        writeln!(
+            serial,
+            "Acquire HE20 DCM: {}",
+            config.borrow().as_ref().unwrap().csi_config.acquire_csi_dcm
+        )
+        .unwrap();
+        writeln!(
+            serial,
+            "Acquire HE20 Beamformed: {}",
+            config
+                .borrow()
+                .as_ref()
+                .unwrap()
+                .csi_config
+                .acquire_csi_beamformed
+        )
+        .unwrap();
+        writeln!(
+            serial,
+            "STBC HE: {}",
+            config
+                .borrow()
+                .as_ref()
+                .unwrap()
+                .csi_config
+                .acquire_csi_he_stbc
+        )
+        .unwrap();
+        writeln!(
+            serial,
+            "Scale Value: {}",
+            config.borrow().as_ref().unwrap().csi_config.val_scale_cfg
+        )
+        .unwrap();
+    });
+}
+
+#[cfg(not(feature = "esp32c6"))]
+fn set_csi<'a>(
+    _menu: &Menu<SerialInterfaceType, Context>,
+    item: &Item<SerialInterfaceType, Context>,
+    args: &[&str],
+    serial: &mut SerialInterfaceType,
     _context: &mut Context,
 ) {
     let disable_lltf = argument_finder(item, args, "disable-lltf");
@@ -690,10 +1021,10 @@ fn set_csi<'a>(
 }
 
 fn set_wifi<'a>(
-    _menu: &Menu<UsbSerialJtag<Async>, Context>,
-    item: &Item<UsbSerialJtag<Async>, Context>,
+    _menu: &Menu<SerialInterfaceType, Context>,
+    item: &Item<SerialInterfaceType, Context>,
     args: &[&str],
-    serial: &mut UsbSerialJtag<Async>,
+    serial: &mut SerialInterfaceType,
     _context: &mut Context,
 ) {
     let mode = argument_finder(item, args, "mode");
@@ -853,10 +1184,10 @@ fn set_wifi<'a>(
 }
 
 fn start_csi_collect<'a>(
-    _menu: &Menu<UsbSerialJtag<Async>, Context>,
-    item: &Item<UsbSerialJtag<Async>, Context>,
+    _menu: &Menu<SerialInterfaceType, Context>,
+    item: &Item<SerialInterfaceType, Context>,
     args: &[&str],
-    serial: &mut UsbSerialJtag<Async>,
+    serial: &mut SerialInterfaceType,
     _context: &mut Context,
 ) {
     let duration = argument_finder(item, args, "duration");
@@ -879,10 +1210,10 @@ fn start_csi_collect<'a>(
 }
 
 fn show_config<'a>(
-    _menu: &Menu<UsbSerialJtag<Async>, Context>,
-    _item: &Item<UsbSerialJtag<Async>, Context>,
+    _menu: &Menu<SerialInterfaceType, Context>,
+    _item: &Item<SerialInterfaceType, Context>,
     _args: &[&str],
-    serial: &mut UsbSerialJtag<Async>,
+    serial: &mut SerialInterfaceType,
     _context: &mut Context,
 ) {
     writeln!(serial, "\nTraffic Settings:").unwrap();
@@ -923,6 +1254,7 @@ fn show_config<'a>(
         )
         .unwrap();
         writeln!(serial, "\nCSI Settings:").unwrap();
+        #[cfg(not(feature = "esp32c6"))]
         writeln!(
             serial,
             "CSI Feature Flags: LLTF: {}, HTLTF: {}, STBC HTLTF: {}, LTF Merge: {}, Channel Filter: {}",
@@ -946,6 +1278,72 @@ fn show_config<'a>(
                 .unwrap()
                 .csi_config
                 .channel_filter_enabled,
+        )
+        .unwrap();
+        #[cfg(feature = "esp32c6")]
+        writeln!(
+            serial,
+            "CSI Feature Flags: CSI Enable: {}, CSI Legacy: {}, HT20: {}, HT40: {}, HE20 SU: {}, HE20 MU: {}, HE20 DCM: {}, HE20 Beamformed: {}, HE STBC: {}, Scale Value: {}",
+            config
+                .borrow()
+                .as_ref()
+                .unwrap()
+                .csi_config
+                .enable,
+            config
+                .borrow()
+                .as_ref()
+                .unwrap()
+                .csi_config
+                .acquire_csi_legacy,
+            config
+                .borrow()
+                .as_ref()
+                .unwrap()
+                .csi_config
+                .acquire_csi_ht20,
+                config
+                .borrow()
+                .as_ref()
+                .unwrap()
+                .csi_config
+                .acquire_csi_ht40,
+                config
+                .borrow()
+                .as_ref()
+                .unwrap()
+                .csi_config
+                .acquire_csi_su,
+                config
+                .borrow()
+                .as_ref()
+                .unwrap()
+                .csi_config
+                .acquire_csi_mu,
+                config
+                .borrow()
+                .as_ref()
+                .unwrap()
+                .csi_config
+                .acquire_csi_dcm,
+                config
+                .borrow()
+                .as_ref()
+                .unwrap()
+                .csi_config
+                .acquire_csi_beamformed,
+                config
+                .borrow()
+                .as_ref()
+                .unwrap()
+                .csi_config
+                .acquire_csi_he_stbc,
+                config
+                .borrow()
+                .as_ref()
+                .unwrap()
+                .csi_config
+                .val_scale_cfg,
         )
         .unwrap();
         writeln!(serial, "\nWiFi Settings:").unwrap();
@@ -975,10 +1373,10 @@ fn show_config<'a>(
 }
 
 fn reset_config<'a>(
-    _menu: &Menu<UsbSerialJtag<Async>, Context>,
-    _item: &Item<UsbSerialJtag<Async>, Context>,
+    _menu: &Menu<SerialInterfaceType, Context>,
+    _item: &Item<SerialInterfaceType, Context>,
     _args: &[&str],
-    serial: &mut UsbSerialJtag<Async>,
+    serial: &mut SerialInterfaceType,
     _context: &mut Context,
 ) {
     CSI_COLLECTOR.lock(|config| {
