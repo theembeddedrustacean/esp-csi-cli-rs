@@ -31,13 +31,13 @@ In order to use this crate, you would need to build and flash the source code fo
 ## Minimum Requirements
 
 * **Hardware:** An ESP development board (e.g., ESP32-C3, ESP32-S3, ESP32...etc.).
-* **Software:** `espflash` to flash the binary and monitor the output. Installation instructions are available [here](https://docs.esp-rs.org/book/tooling/espflash.html). 
+* **Software:** A tool to flash binaries and a tool to monitor output. It is recommended to use `espflash` as it supports both. Additionally, `espflash` supports `defmt` log interpretation. Installation instructions are available [here](https://docs.esp-rs.org/book/tooling/espflash.html). 
 
-> ‼️ Installing `espflash` requires a Rust installation. If you don't have Rust installed, follow instruction on the [rustup](https://rustup.rs/) website.
+> ‼️ Installing `espflash` requires a Rust installation. If you don't have Rust installed, follow the instructions on the [rustup](https://rustup.rs/) website.
 
 ## Usage
 
-1.  **Download Binary:** Navigate to the /binaries folder in the repository and identify the correct binary .elf file for your ESP chip. Here are the file names for the different devices:
+1.  **Download Binary:** Navigate to the /binaries folder in the repository and identify the correct binary .elf file for your ESP chip. There are binaries supporting both regular `println` logging and the more efficient `defmt` loggging. Here are the file names for the different devices:
 
 <div align="center">
 
@@ -56,6 +56,8 @@ In order to use this crate, you would need to build and flash the source code fo
 
 </div>
 
+> 📝 Using `defmt` binaries requires that you use a serial monitoring tool capable of interpreting `defmt` encoding such as `espflash`. If you do not, typically you would observe weird characters appear on the monitoring output.
+
 2.  **Flash:** Connect to your ESP device over USB and use `espflash` to flash the downloaded binary to your ESP by running the following command:
     ```bash
     espflash flash [path to downloaded .elf binary]
@@ -63,10 +65,10 @@ In order to use this crate, you would need to build and flash the source code fo
 3.  **Monitor & Interact with CLI:** Use `espflash` to connect to and interact with your device by running either of the commands below. If you are using a file with a `defmt` extension note that you'll need to pass the same .elf file from step 2 to the monitor.
     ```bash
     # Example w/o defmt
-    espflash --monitor [path to .elf binary]
+    espflash --monitor
 
     # Example w/ defmt
-    espflash monitor —elf [path to attached file] —log-format defmt 
+    espflash --monitor -—elf [path to attached file] -—log-format defmt 
     ```
 > 📝 When logging over `defmt` the monitor requires the original binary to be able to decode the incoming characters.
 
@@ -77,6 +79,7 @@ In order to use this crate, you would need to build and flash the source code fo
 ## CLI Commands
 
 This is a list of commands available through the CLI interface:
+> 📝 The `set-csi` commands for the ESP32-C6 will be different.
 
 * **`help [command]`**
     * Description: Display the main help menu or details for a specific command.
@@ -169,8 +172,8 @@ This is a list of commands available through the CLI interface:
 
 > 🛑 Ensure the target AP is running before starting collection in Station mode. Otherwise collection will fail as the station wont habe an AP to connect to.
 
-## Building From Source
-It's possible to clone the repository and build the source. This would require some additional dependencies and modifications depending on the device you are using.
+## Building From Source (Optional)
+Rather than downloading pre-built binaries, another approach is to clone the repository and build the source. This would require some additional dependencies and modifications depending on the device you are using.
 
 ### 📦 Dependencies
 At a minimum, you would need the following:
@@ -179,22 +182,31 @@ At a minimum, you would need the following:
 * A terminal program to view the output. It is also recommended to use  `esp-flash` which was installed in the previous step.
 
 ### 📋 Procedure
-1. ***Setup Project***: Clone this repository. The project repository code configuration defaults to the ESP32-C3 device. If you are using a ESP32-C3 you can skip to step 4, otherwise you need to modify the code for your desired device. Also if you wish to enable `defmt` logging, make sure to read the following section.
-2. ***Modify*** **`.cargo/config.toml`**: Head to the `config.toml` file and uncommment the runner and build target that aligns with your device.
-3. ***Modify*** **Cargo.toml**: Uncomment the feature flags relevant to your device in the dependencies.
-4. ***Build***: execute `cargo build` in the terminal to build the project.
-5. ***Monitor***: execute `cargo run` in the terminal to connect to and interact with your device.
+1. ***Setup Project***: Clone this repository. The project repository code configuration defaults to the ESP32-C3 device. If you are using a ESP32-C3 you can skip to step 3, otherwise you need to modify the `config.toml` for your desired device. Also if you wish to enable `defmt` logging, make sure to read the following section.
+2. ***Modify*** **`.cargo/config.toml`**: Head to the `config.toml` file and uncommment the runner and build target that aligns with the device you are using.
+3. ***Build***: execute the following command in the terminal to build the project:
+```bash
+cargo build --features "[device name] [logging framework]" --release
 
+# Example for the ESP32-C6 with println
+cargo build --features "esp32c6 println" --release
+
+# Example for the ESP32 with defmt
+cargo build --features "esp32s3 defmt" --release
+```
+4. ***Monitor***: execute the following command in the terminal to run the project:
+```bash
+cargo run --features "[device name] [logging framework]" --release
+```
 ## Enabling Logging w/ `defmt`
-This application can use either standard `println!` macros or the `defmt` framework for logging.
+This application can use either the standard `println!` macros or the `defmt` framework for logging.
 
-You can enable `defmt` as follows:
-1.  **Modify `Cargo.toml`:**  Add `defmt` and `defmt-rtt` as dependencies by uncommenting the relevant lines.
-2.  **Add Runner Parameters:** In `.cargo/config.toml` add `--log-format defmt` to the `runner` as follows:
+If you wan to enable `defmt` you need to make sure of the following in the `.cargo/config.toml`:
+1.  **Runner Parameters are Included:** In `.cargo/config.toml` make sure `--log-format defmt` is added to the `runner` arguments as follows:
 ```
 runner = "espflash flash --monitor --log-format defmt"
 ```
-3.  **Add Linker Flags:** In `.cargo/config.toml` add `"link-arg=-Tdefmt.x"` to `rustflags` as follows:
+2.  **Linker Flags are Included:** In `.cargo/config.toml` make sure that `"-C link-arg=-Tdefmt.x"` is added to `rustflags` as follows:
 ```
 rustflags = [
   "-C",
